@@ -1,0 +1,1 @@
+"""RadishArticle backend application."""

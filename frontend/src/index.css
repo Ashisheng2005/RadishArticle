@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+body {
+  @apply bg-stone-950 text-stone-100 min-h-screen;
+}

@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+data/projects/*
+!data/projects/.gitkeep
+frontend/node_modules/
+frontend/dist/
+.chroma/
+*.log
+.DS_Store
+.idea/
+.vscode/
