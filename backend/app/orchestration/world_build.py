@@ -1,3 +1,16 @@
+"""
+世界观构建流水线（world_build）。
+
+执行路径：
+  AgentRouter._node_world_build → run_world_build()
+    → 拼装 prompt（含用户 bootstrap + 子 Agent 步骤说明）
+    → AgentFactory.invoke_orchestrator()  ← DeepAgents 在此接管
+    → 协调者按 prompt 依次 task 委派 research / world-architect / validator / curator
+
+注意：本文件不手写子 Agent 调用顺序，顺序由 ORCHESTRATOR_PROMPT + 用户消息里的「步骤」约束；
+      DeepAgents 的协调者会自主决定何时 call task 工具。
+"""
+
 import json
 from typing import Any, Callable
 
@@ -7,6 +20,7 @@ from app.models.schemas import WorkflowEvent
 
 
 def _bootstrap_context(wiki: WikiStore) -> str:
+    """把 meta/bootstrap.json 转成协调者能读懂的任务说明书。"""
     b = wiki.get_bootstrap()
     return f"""请执行世界观构建工作流：
 
@@ -36,6 +50,7 @@ async def run_world_build(
     on_event: Callable[[WorkflowEvent], Any] | None = None,
 ) -> dict:
     async def emit(stage: str, message: str, progress: float):
+        """向前端 SSE 上报粗粒度阶段（与 Agent 内部细步骤无关）。"""
         if on_event:
             ev = WorkflowEvent(stage=stage, message=message, progress=progress)
             result = on_event(ev)
@@ -50,8 +65,10 @@ async def run_world_build(
 
     await emit("world_architect", "构建世界观…", 0.35)
     try:
+        # thread_id 隔离本次世界观会话的 scratch，避免与章节写作混用
         result = factory.invoke_orchestrator(prompt, thread_id=f"world-{wiki.project_id}")
     except Exception as e:
+        # 无 API Key 时走本地模板，便于学习目录结构而不调 LLM
         if "api" in str(e).lower() or "key" in str(e).lower():
             await emit("fallback", "无 API Key，使用模板初始化 wiki", 0.5)
             _fallback_world_build(wiki)
@@ -62,6 +79,7 @@ async def run_world_build(
     await emit("validate", "连续性校验…", 0.7)
     await emit("wiki_curator", "写入 Wiki…", 0.9)
 
+    # 校验报告若由 validator 写入 scratch，这里可读回（宿主机路径与虚拟路径对应）
     validation_path = wiki.project_root / "scratch" / "validation_report.json"
     validation = {}
     if validation_path.exists():
@@ -76,7 +94,7 @@ async def run_world_build(
 
 
 def _fallback_world_build(wiki: WikiStore) -> None:
-    """Seed canon files when LLM is unavailable (dev/demo)."""
+    """无 LLM 时用 Python 直接种子化 canon 文件，演示 Wiki 目录约定。"""
     b = wiki.get_bootstrap()
     wiki.write_markdown(
         "wiki/canon/world.md",

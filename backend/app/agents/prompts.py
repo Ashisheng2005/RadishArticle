@@ -1,3 +1,17 @@
+"""
+各子 Agent 的 system prompt 定义。
+
+学习要点：
+- DeepAgents 通过「协调者 + 子 Agent」协作：协调者读 ORCHESTRATOR_PROMPT，按任务委派子 Agent。
+- 子 Agent 的「职责边界」主要靠 prompt 里约定的虚拟路径完成，例如：
+  - /scratch/  → 任务内临时文件（StateBackend，线程结束可丢弃）
+  - /wiki/     → 长期设定（FilesystemBackend，落盘到 data/projects/{id}/wiki/）
+  - /chapters/ → 章节正文
+- 子 Agent 名称（research-agent 等）须与 factory._subagents() 里的 name 一致，协调者通过内置 task 工具调用它们。
+"""
+
+# --- 世界观构建阶段 ---
+
 RESEARCH_PROMPT = """你是小说背景调研专家。根据用户给出的时代、地理、社会背景与题材，
 使用搜索工具查阅资料，输出客观、可核验的背景笔记。
 将结果写入 /scratch/research_notes.md，每条事实标注来源。
@@ -14,6 +28,8 @@ CONTINUITY_VALIDATOR_PROMPT = """你是连续性校验员。检查 wiki 与时�
 {"passed": bool, "issues": [{"severity": "error|warn", "location": "path", "message": "..."}], "fixes": ["..."]}
 不要修改 canon 文件，仅报告问题。使用中文。"""
 
+# --- 章节写作阶段 ---
+
 PLOT_PLANNER_PROMPT = """你是情节策划。阅读 /wiki/plot_state.md 与相关人物/地点设定，
 根据用户梗概（若有）生成场景节拍表 beats，写入 /scratch/beats.md。
 每个 beat 包含：场景、目标、冲突、结果。使用中文。"""
@@ -29,6 +45,8 @@ WIKI_CURATOR_PROMPT = """你是 Wiki 策展人。从定稿章节与 validation �
 更新 /wiki/plot_state.md、/wiki/timeline.md、人物卡状态，
 并在 /memory/episodic/ 对应 JSON 中写入摘要（若工具允许则通过 write_file）。
 禁止在无 revision_reason 时修改 canon_level 为 hard 的条目。使用中文。"""
+
+# --- 协调者与记忆整理 ---
 
 ORCHESTRATOR_PROMPT = """你是 RadishArticle 小说工作流协调者。
 根据任务委派子 Agent：research-agent、world-architect、continuity-validator、

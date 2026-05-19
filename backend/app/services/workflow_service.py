@@ -1,6 +1,16 @@
-from typing import Any
+"""
+工作流服务：API / CLI 的统一入口。
 
-from app.memory.wiki_store import WikiStore
+调用链（以异步世界观构建为例）：
+  POST /world-build
+    → WorkflowService.run_world_build_async
+    → job_manager 后台任务 + SSE 队列
+    → AgentRouter.run(WORLD_BUILD)
+    → run_world_build → AgentFactory.invoke_orchestrator
+
+同步版本（CLI 使用）跳过 JobManager，直接 await router.run()。
+"""
+
 from app.models.schemas import (
     ChapterWriteRequest,
     TaskType,

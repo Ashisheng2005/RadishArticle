@@ -45,3 +45,18 @@ python -m cli.radish_article_cli write-chapter <project_id> --outline "第一章
 ## 项目数据
 
 运行时数据位于 `data/projects/{novel_id}/`，包含 `wiki/`、`chapters/`、`memory/` 等目录。
+
+## 详细文档
+
+完整的工作流过程、组件职责、三层记忆与 API 说明见：
+
+**[docs/WORKFLOW.md](docs/WORKFLOW.md)**
+
+## 学习 DeepAgent 工作流（源码阅读顺序）
+
+1. [`backend/app/memory/backends.py`](backend/app/memory/backends.py) — 虚拟路径 `/wiki/`、`/scratch/` 如何映射到磁盘
+2. [`backend/app/agents/prompts.py`](backend/app/agents/prompts.py) — 各子 Agent 职责与约定路径
+3. [`backend/app/agents/factory.py`](backend/app/agents/factory.py) — `create_deep_agent`、subagents、invoke
+4. [`backend/app/orchestration/world_build.py`](backend/app/orchestration/world_build.py) — 如何把任务拼成协调者 prompt
+5. [`backend/app/orchestration/router.py`](backend/app/orchestration/router.py) — LangGraph 业务分流（与 DeepAgents 内部分工两层）
+6. [`backend/app/services/workflow_service.py`](backend/app/services/workflow_service.py) — API/CLI 入口与 Job SSE

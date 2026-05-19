@@ -1,3 +1,12 @@
+"""
+记忆整理流水线（memory_compact）。
+
+混合模式：
+  1. Python 规则引擎 MemoryCompactor：去重实体索引、裁剪过长 plot_state、归档旧 episodic
+  2. Chroma 重建向量索引，供 wiki_vector_search 语义检索
+  3. 可选再调 DeepAgents wiki-curator 做语义层面的整理报告
+"""
+
 from typing import Any, Callable
 
 from app.agents.factory import AgentFactory
@@ -16,8 +25,8 @@ async def run_memory_compact(
         if on_event:
             ev = WorkflowEvent(stage=stage, message=message, progress=progress)
             result = on_event(ev)
-            if hasattr(result, "__await__"):
-                await result
+            if hasattr(r, "__await__"):
+                await r
 
     await emit("compact", "整理记忆索引…", 0.2)
     compactor = MemoryCompactor(wiki)
@@ -37,7 +46,7 @@ async def run_memory_compact(
             thread_id=f"compact-{wiki.project_id}",
         )
     except Exception:
-        pass
+        pass  # 无 API Key 时仅保留 Python 侧整理结果
 
     await emit("done", "记忆整理完成", 1.0)
     return {**stats, "vectors_indexed": indexed}

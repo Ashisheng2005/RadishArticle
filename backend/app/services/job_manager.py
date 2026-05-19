@@ -1,3 +1,12 @@
+"""
+异步任务与 SSE 事件桥接。
+
+工作流节点里 emit(stage, message, progress) 的事件最终进入：
+  job_manager.emit → asyncio.Queue → GET /jobs/{id}/stream (EventSource)
+
+这样 DeepAgents 长耗时调用不会阻塞 HTTP 连接，前端可显示「调研中 / 构世界中」等阶段。
+"""
+
 import asyncio
 import uuid
 from collections import defaultdict
@@ -7,8 +16,6 @@ from app.models.schemas import JobState, JobStatus, TaskType, WorkflowEvent
 
 
 class JobManager:
-    """In-memory async job tracking with event queues for SSE."""
-
     def __init__(self):
         self._jobs: dict[str, JobStatus] = {}
         self._queues: dict[str, asyncio.Queue] = defaultdict(asyncio.Queue)
@@ -51,6 +58,7 @@ class JobManager:
         await self._queues[job_id].put(WorkflowEvent(stage="error", message=error, progress=0.0))
 
     async def subscribe(self, job_id: str) -> AsyncIterator[WorkflowEvent]:
+        """SSE 端点消费此生成器，直到 stage 为 done 或 error。"""
         queue = self._queues[job_id]
         while True:
             event = await queue.get()
